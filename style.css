@@ -21,3 +21,47 @@ ul { list-style: none; padding: 0; max-height: 100px; overflow-y: auto; margin-b
 li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
 .badge { padding: 2px 5px; border-radius: 4px; color: white; font-size: 0.65rem; margin-right: 5px; }
 .bg-food { background: #fb923c; } .bg-daily { background: #34d399; } .bg-hobby { background: #f472b6; } .bg-other { background: #94a3b8; }
+
+// 既存のコードの下の方に追加
+
+document.getElementById('findStoresBtn').addEventListener('click', function() {
+  const mapElement = document.getElementById('map');
+  mapElement.style.display = 'block'; // 地図を表示
+
+  // 1. 現在地を取得
+  if (!navigator.geolocation) {
+    alert("お使いのブラウザは位置情報に対応していません");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition((position) => {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+
+    // 2. 地図を表示
+    const map = L.map('map').setView([lat, lon], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 3. 現在地にピンを立てる
+    L.marker([lat, lon]).addTo(map).bindPopup('あなたの場所').openPopup();
+
+    // 4. 周辺のスーパーを検索（外部サービス Overpass API を使用）
+    fetch(`https://overpass-api.de/api/interpreter?data=[out:json];node["shop"="supermarket"](around:2000,${lat},${lon});out;`)
+      .then(response => response.json())
+      .then(data => {
+        data.elements.forEach(store => {
+          L.marker([store.lat, store.lon])
+            .addTo(map)
+            .bindPopup(store.tags.name || 'スーパー');
+        });
+      });
+    
+    // 二度押しできないようにボタンを隠すか無効化
+    this.style.display = 'none';
+    
+  }, () => {
+    alert("位置情報の取得に失敗しました。設定を確認してください。");
+  });
+});
