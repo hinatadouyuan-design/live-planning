@@ -1,52 +1,58 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link rel="stylesheet" href="style.css">
-<script src="script.js" defer></script>
-<div class="app-container">
-  <h1>📊 カテゴリ別・家計簿</h1>
-  
-  <div class="budget-setup">
-    <label>総予算: ¥</label>
-    <input type="number" id="monthlyBudget" value="50000">
-  </div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI家計簿アプリ</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <h1>📊 カテゴリ別・家計簿</h1>
+        
+        <div class="budget-setup">
+            <label>総予算: ¥</label>
+            <input type="number" id="monthlyBudget" value="50000">
+        </div>
 
-  <div class="input-section">
-    <input type="text" id="itemName" placeholder="商品名">
-    <select id="itemCategory">
-      <option value="food">食費</option>
-      <option value="daily">日用品</option>
-      <option value="hobby">趣味</option>
-      <option value="other">他</option>
-    </select>
-    <input type="number" id="itemPrice" placeholder="価格">
-    <button id="addBtn">追加</button>
-  </div>
+        <div class="input-section">
+            <input type="text" id="itemName" placeholder="商品名">
+            <select id="itemCategory">
+                <option value="food">食費</option>
+                <option value="daily">日用品</option>
+                <option value="hobby">趣味</option>
+                <option value="other">他</option>
+            </select>
+            <input type="number" id="itemPrice" placeholder="価格">
+            <button id="addBtn">追加</button>
+        </div>
 
-  <ul id="itemList"></ul>
+        <ul id="itemList"></ul>
 
-  <div class="view-selector">
-    <button id="viewDaily" class="active">日ごと</button>
-    <button id="viewWeekly">週ごと</button>
-  </div>
+        <div class="map-section">
+            <button id="findStoresBtn" class="map-btn">🛒 近くのスーパーを表示</button>
+            <div id="map"></div>
+        </div>
 
-  <div class="chart-container">
-    <canvas id="expenseChart"></canvas>
-  </div>
+        <div class="view-selector">
+            <button id="viewDaily" class="active">日ごと</button>
+            <button id="viewWeekly">週ごと</button>
+        </div>
 
-  <div class="status-board">
-    <div class="status-item"><span>今日の合計:</span><span id="totalPrice">¥0</span></div>
-    <div class="status-item highlight"><span>残り予算:</span><span id="remainingBalance">¥0</span></div>
-  </div>
-  
-  <button id="clearBtn" class="secondary">記録を確定して保存</button>
-</div>
+        <div class="chart-container">
+            <canvas id="expenseChart"></canvas>
+        </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<div class="app-container">
-  <div class="map-section">
-    <button id="findStoresBtn" class="secondary">近くのスーパーを探す</button>
-    <div id="map" style="height: 200px; margin-top: 10px; border-radius: 12px; display: none;"></div>
-  </div>
-
-  </div>
+        <div class="status-board">
+            <div class="status-item"><span>入力中の合計:</span><span id="totalPrice">¥0</span></div>
+            <div class="status-item highlight"><span>今月の残り予算:</span><span id="remainingBalance">¥0</span></div>
+        </div>
+        
+        <button id="clearBtn" class="secondary">記録を確定して予算から引く</button>
+    </div>
+    <script src="script.js" defer></script>
+</body>
+</html>
