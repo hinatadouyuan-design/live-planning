@@ -1,67 +1,141 @@
-:root { --primary: #6366f1; --dark: #1e293b; }
-body { font-family: sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
-.app-container { background: white; padding: 20px; border-radius: 20px; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-.budget-setup { margin-bottom: 15px; padding: 10px; background: #eef2ff; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
-.budget-setup input { width: 100px; border: none; border-bottom: 2px solid var(--primary); text-align: right; background: transparent; font-weight: bold; font-size: 1.1rem; }
-.input-section { display: flex; gap: 4px; margin-bottom: 10px; }
-input, select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; }
-#itemName { flex: 2; }
-#itemPrice { width: 60px; }
-#addBtn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-.view-selector { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
-.view-selector button { background: #e2e8f0; border: none; padding: 4px 12px; border-radius: 15px; cursor: pointer; font-size: 0.7rem; }
-.view-selector button.active { background: var(--primary); color: white; }
-.chart-container { height: 180px; margin-bottom: 15px; }
-.status-board { padding: 15px; background: var(--dark); color: white; border-radius: 15px; }
-.status-item { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.highlight { font-size: 1.1rem; font-weight: bold; border-top: 1px solid #475569; padding-top: 8px; }
-.negative { color: #ef4444; }
-.secondary { width: 100%; margin-top: 10px; background: #64748b; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; }
-ul { list-style: none; padding: 0; max-height: 100px; overflow-y: auto; margin-bottom: 10px; }
-li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
-.badge { padding: 2px 5px; border-radius: 4px; color: white; font-size: 0.65rem; margin-right: 5px; }
-.bg-food { background: #fb923c; } .bg-daily { background: #34d399; } .bg-hobby { background: #f472b6; } .bg-other { background: #94a3b8; }
+document.addEventListener('DOMContentLoaded', () => {
+    let items = JSON.parse(localStorage.getItem('myItems')) || [];
+    let history = JSON.parse(localStorage.getItem('myHistory')) || [];
+    let currentView = 'daily';
+    let expenseChart = null;
+    let map = null;
 
-// 既存のコードの下の方に追加
+    const colors = { food: '#fb923c', daily: '#34d399', hobby: '#f472b6', other: '#94a3b8' };
+    const catNames = { food: '食費', daily: '日用品', hobby: '趣味', other: '他' };
 
-document.getElementById('findStoresBtn').addEventListener('click', function() {
-  const mapElement = document.getElementById('map');
-  mapElement.style.display = 'block'; // 地図を表示
+    // --- 1. グラフ初期化 ---
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    expenseChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: ['food', 'daily', 'hobby', 'other'].map(cat => ({
+                label: catNames[cat],
+                data: [],
+                backgroundColor: colors[cat],
+                stack: 'stack0'
+            }))
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+        }
+    });
 
-  // 1. 現在地を取得
-  if (!navigator.geolocation) {
-    alert("お使いのブラウザは位置情報に対応していません");
-    return;
-  }
+    // --- 2. 画面更新(計算)ロジック ---
+    function updateUI() {
+        const totalBudget = parseInt(document.getElementById('monthlyBudget').value) || 0;
+        const pastTotalSpent = history.reduce((sum, h) => sum + h.total, 0);
+        
+        let currentListTotal = 0;
+        const itemList = document.getElementById('itemList');
+        itemList.innerHTML = '';
 
-  navigator.geolocation.getCurrentPosition((position) => {
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
-
-    // 2. 地図を表示
-    const map = L.map('map').setView([lat, lon], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // 3. 現在地にピンを立てる
-    L.marker([lat, lon]).addTo(map).bindPopup('あなたの場所').openPopup();
-
-    // 4. 周辺のスーパーを検索（外部サービス Overpass API を使用）
-    fetch(`https://overpass-api.de/api/interpreter?data=[out:json];node["shop"="supermarket"](around:2000,${lat},${lon});out;`)
-      .then(response => response.json())
-      .then(data => {
-        data.elements.forEach(store => {
-          L.marker([store.lat, store.lon])
-            .addTo(map)
-            .bindPopup(store.tags.name || 'スーパー');
+        items.forEach((item, index) => {
+            currentListTotal += item.price;
+            const li = document.createElement('li');
+            li.innerHTML = `<span><span class="badge bg-${item.category}">${catNames[item.category]}</span>${item.name}</span>
+                            <span>¥${item.price.toLocaleString()} <button class="del-btn" data-index="${index}" style="border:none; background:none; color:red; cursor:pointer;">✕</button></span>`;
+            itemList.appendChild(li);
         });
-      });
-    
-    // 二度押しできないようにボタンを隠すか無効化
-    this.style.display = 'none';
-    
-  }, () => {
-    alert("位置情報の取得に失敗しました。設定を確認してください。");
-  });
+
+        document.getElementById('totalPrice').innerText = `¥${currentListTotal.toLocaleString()}`;
+        const remaining = totalBudget - pastTotalSpent - currentListTotal;
+        const remDisplay = document.getElementById('remainingBalance');
+        remDisplay.innerText = `¥${remaining.toLocaleString()}`;
+        remaining < 0 ? remDisplay.classList.add('negative') : remDisplay.classList.remove('negative');
+
+        // グラフ更新
+        const labels = [...new Set(history.map(h => {
+            if (currentView === 'weekly') {
+                const d = new Date(h.fullDate);
+                return `${d.getMonth() + 1}月 第${Math.ceil(d.getDate() / 7)}週`;
+            }
+            return h.date;
+        }))];
+
+        expenseChart.data.labels = labels;
+        ['food', 'daily', 'hobby', 'other'].forEach((cat, i) => {
+            expenseChart.data.datasets[i].data = labels.map(label => {
+                return history.filter(h => {
+                    const hLabel = currentView === 'weekly' ? `${new Date(h.fullDate).getMonth() + 1}月 第${Math.ceil(new Date(h.fullDate).getDate() / 7)}週` : h.date;
+                    return hLabel === label;
+                }).reduce((sum, h) => sum + (h.breakdown ? h.breakdown[cat] || 0 : 0), 0);
+            });
+        });
+        expenseChart.update();
+
+        localStorage.setItem('myItems', JSON.stringify(items));
+        localStorage.setItem('myHistory', JSON.stringify(history));
+        localStorage.setItem('myBudget', totalBudget);
+    }
+
+    // --- 3. イベント登録 ---
+    document.getElementById('addBtn').addEventListener('click', () => {
+        const name = document.getElementById('itemName').value;
+        const price = parseInt(document.getElementById('itemPrice').value);
+        const category = document.getElementById('itemCategory').value;
+        if (name && !isNaN(price)) {
+            items.push({ name, price, category });
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemPrice').value = '';
+            updateUI();
+        }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        if (items.length === 0) return;
+        const total = items.reduce((sum, i) => sum + i.price, 0);
+        const breakdown = { food: 0, daily: 0, hobby: 0, other: 0 };
+        items.forEach(i => breakdown[i.category] += i.price);
+        const now = new Date();
+        history.push({ 
+            date: `${now.getMonth() + 1}/${now.getDate()}`, 
+            total: total, 
+            breakdown: breakdown, 
+            fullDate: now.toISOString() 
+        });
+        items = [];
+        updateUI();
+    });
+
+    // マップ機能
+    document.getElementById('findStoresBtn').addEventListener('click', function() {
+        document.getElementById('map').style.display = 'block';
+        if (!navigator.geolocation) return alert("位置情報非対応です");
+
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            if (!map) {
+                map = L.map('map').setView([lat, lon], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                L.marker([lat, lon]).addTo(map).bindPopup("現在地").openPopup();
+
+                fetch(`https://overpass-api.de/api/interpreter?data=[out:json];node["shop"="supermarket"](around:2000,${lat},${lon});out;`)
+                .then(res => res.json())
+                .then(data => {
+                    data.elements.forEach(s => {
+                        L.marker([s.lat, s.lon]).addTo(map).bindPopup(s.tags.name || "スーパー");
+                    });
+                });
+            }
+        });
+    });
+
+    // 削除ボタン・切り替え
+    document.getElementById('itemList').addEventListener('click', (e) => { if (e.target.classList.contains('del-btn')) { items.splice(e.target.dataset.index, 1); updateUI(); } });
+    document.getElementById('viewDaily').addEventListener('click', (e) => { currentView = 'daily'; setActiveBtn(e.target); updateUI(); });
+    document.getElementById('viewWeekly').addEventListener('click', (e) => { currentView = 'weekly'; setActiveBtn(e.target); updateUI(); });
+    function setActiveBtn(btn) { document.querySelectorAll('.view-selector button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    document.getElementById('monthlyBudget').addEventListener('input', updateUI);
+
+    updateUI();
 });
