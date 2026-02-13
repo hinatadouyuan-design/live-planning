@@ -107,3 +107,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updateUI();
 });
+
+/* 既存のCSSに追加 */
+.map-section {
+  margin: 15px 0;
+}
+
+#map {
+  border: 1px solid #cbd5e1;
+  z-index: 1; /* 重なりの順序を調整 */
+}
